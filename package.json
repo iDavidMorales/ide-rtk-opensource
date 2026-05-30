@@ -1,0 +1,94 @@
+{
+  "name": "ide-rtk",
+  "version": "0.2.0",
+  "description": "IDE para Routicket OS",
+  "private": true,
+  "main": "main.js",
+  "homepage": "https://routicket.com",
+  "author": {
+    "name": "David Morales",
+    "email": "contacto@routicket.com"
+  },
+  "productName": "RTK IDE",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win nsis",
+    "dist:mac": "electron-builder --mac zip",
+    "dist:linux": "electron-builder --linux AppImage deb",
+    "dist:deb": "electron-builder --linux deb"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "electron-installer-debian": "^3.2.0"
+  },
+  "build": {
+    "appId": "com.routicket.ide.rtk",
+    "productName": "RTK IDE",
+    "artifactName": "${productName}-${version}.${ext}",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "vendor/**/*",
+      "icon.png",
+      "icon.ico",
+      "icon.icns",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "icon.icns",
+      "identity": null,
+      "target": [
+        "zip"
+      ]
+    },
+    "win": {
+      "icon": "icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "icon": "icon.png",
+      "executableName": "ide-rtk",
+      "target": [
+        "deb"
+      ],
+      "category": "Development"
+    },
+    "deb": {
+      "compression": "xz",
+      "maintainer": "David Morales <contacto@routicket.com>",
+      "priority": "optional",
+      "packageName": "ide-rtk",
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libasound2",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1"
+      ]
+    }
+  },
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "codemirror": "^5.65.16",
+    "highlight.js": "^11.11.1",
+    "monaco-editor": "^0.55.1",
+    "xlsx": "^0.18.5"
+  }
+}

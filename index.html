@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RTK IDE v0.2</title>
+  <link rel="stylesheet" href="./vendor/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="./vendor/highlightjs/styles/github-dark.min.css" />
+  <link rel="stylesheet" href="./vendor/codemirror/lib/codemirror.css" />
+  <link rel="stylesheet" href="./vendor/codemirror/theme-eclipse.css" />
+  <link rel="stylesheet" href="./vendor/codemirror/theme-material.css" />
+  <link rel="stylesheet" href="./vendor/codemirror/theme-github.css" />
+  <link id="prismThemeLink" rel="stylesheet" href="./vendor/prism-solarizedlight.min.css" />
+  <script src="./vendor/codemirror/lib/codemirror.js"></script>
+  <script src="./vendor/codemirror/addon/runmode/runmode.js"></script>
+  <script src="./vendor/codemirror/mode/xml/xml.js"></script>
+  <script src="./vendor/codemirror/mode/javascript/javascript.js"></script>
+  <script src="./vendor/codemirror/mode/css/css.js"></script>
+  <script src="./vendor/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+  <script src="./vendor/codemirror/mode/php/php.js"></script>
+  <script src="./vendor/codemirror/mode/python/python.js"></script>
+  <script src="./vendor/codemirror/mode/markdown/markdown.js"></script>
+  <script src="./vendor/codemirror/mode/yaml/yaml.js"></script>
+  <script src="./vendor/codemirror/mode/sql/sql.js"></script>
+  <script src="./vendor/codemirror/mode/shell/shell.js"></script>
+  <script src="./vendor/prism.min.js"></script>
+  <script>
+    window.__RTK_MONACO_BASE__ = './vendor/monaco';
+  </script>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-block">
+      <div class="brand-row">
+        <strong>RTK IDE v0.2</strong>
+        <button id="connectSshBtn" class="icon-btn" title="Conectar SSH" aria-label="Conectar SSH"><i class="fa-solid fa-network-wired"></i></button>
+        <button id="rtkPlayBtn" class="icon-btn hidden" title="Routicket Play" aria-label="Routicket Play"><span class="play-emoji">🎵</span></button>
+      </div>
+      <span id="brandCredits">By CodePartners · Routicket.com</span>
+      <span id="topHint">Abre una carpeta para empezar</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="openFolderBtn" class="icon-btn" title="Abrir carpeta" aria-label="Abrir carpeta"><i class="fa-solid fa-folder-open"></i></button>
+      <button id="newFileBtn" class="icon-btn" title="Nuevo archivo" aria-label="Nuevo archivo"><i class="fa-solid fa-file-circle-plus"></i></button>
+      <button id="saveFileBtn" class="icon-btn" title="Guardar" aria-label="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+      <span class="topbar-sep"></span>
+      <button id="toggleCenterBtn" class="icon-btn" title="Ocultar código" aria-label="Ocultar código"><i class="fa-solid fa-code"></i></button>
+      <button id="togglePreviewTopBtn" class="icon-btn" title="Ocultar vista previa" aria-label="Ocultar vista previa"><i class="fa-solid fa-eye"></i></button>
+      <button id="toggleCodeSearchBtn" class="icon-btn search-cta" title="Mostrar buscador de código" aria-label="Mostrar buscador de código">
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M10 4a6 6 0 1 0 3.87 10.6l4.76 4.76 1.41-1.41-4.76-4.76A6 6 0 0 0 10 4Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"></path>
+        </svg>
+      </button>
+      <span class="topbar-sep"></span>
+      <button id="openImporterBtn" class="icon-btn hidden" title="Importar Excel" aria-label="Importar Excel"><i class="fa-solid fa-file-excel"></i></button>
+      <button id="consoleBtn" class="icon-btn" title="Terminal" aria-label="Terminal"><i class="fa-solid fa-terminal"></i></button>
+      <button id="pluginsBtn" class="icon-btn" title="Plugins" aria-label="Plugins"><i class="fa-solid fa-puzzle-piece"></i></button>
+      <button id="settingsBtn" class="icon-btn" title="Configuración" aria-label="Configuración"><i class="fa-solid fa-gear"></i></button>
+      <button id="updatesBtn" class="icon-btn" title="Buscar actualizaciones" aria-label="Buscar actualizaciones"><i class="fa-solid fa-bell"></i></button>
+      <button id="loginBtn" class="icon-btn" title="Login" aria-label="Login"><i class="fa-solid fa-right-to-bracket"></i></button>
+      <span id="sshStatusLight" class="status-light light-red" title="Estado SSH"></span>
+    </div>
+  </header>
+  <main class="workspace">
+    <div id="fileChangeBanner" class="change-banner hidden" role="status" aria-live="polite">
+      <span>El archivo abierto cambió fuera del IDE.</span>
+      <button id="reloadExternalBtn" class="icon-btn" title="Recargar archivo" aria-label="Recargar archivo"><i class="fa-solid fa-rotate"></i></button>
+      <button id="dismissExternalBtn" class="icon-btn" title="Ignorar" aria-label="Ignorar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <aside class="panel left">
+      <div class="panel-title row-space">
+        <span>Archivos</span>
+        <div class="row-actions">
+          <button id="treeLocalTab" class="small-action active" type="button">Local</button>
+          <button id="treeServerTab" class="small-action" type="button">Servidor</button>
+          <button id="refreshTreeBtn" class="small-action" type="button" title="Refrescar árbol" aria-label="Refrescar árbol"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+      </div>
+      <div id="leftFloatingDock" class="floating-dock">
+        <button id="toggleSidebarBtn" class="icon-btn" title="Compactar columna" aria-label="Compactar columna"><i class="fa-solid fa-compress"></i></button>
+        <button id="toggleRecentBtn" class="icon-btn" title="Recientes" aria-label="Recientes"><i class="fa-regular fa-clock"></i></button>
+        <button id="toggleFavBtn" class="icon-btn" title="Favoritos" aria-label="Favoritos"><i class="fa-solid fa-star"></i></button>
+        <button id="expandAllBtn" class="icon-btn" title="Expandir todo" aria-label="Expandir todo"><i class="fa-solid fa-folder-tree"></i></button>
+        <button id="collapseAllBtn" class="icon-btn" title="Colapsar todo" aria-label="Colapsar todo"><i class="fa-solid fa-box-archive"></i></button>
+        <div class="floating-search">
+          <input id="searchInput" type="search" placeholder="Buscar archivo o texto..." />
+          <button id="searchBtn" class="icon-btn" title="Buscar" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+      </div>
+      <div id="treeView" class="tree-view"></div>
+      <div id="serverTreeView" class="tree-view hidden"></div>
+    </aside>
+    <section class="panel center" id="centerPanel">
+      <div class="editor-toolbar">
+        <div class="editor-toolbar-title">
+          <strong id="editorTitle">Código</strong>
+          <span id="languageBadge" class="language-badge">text</span>
+        </div>
+        <div class="editor-toolbar-actions">
+          <button id="copyContentBtn" class="icon-btn" title="Copiar código" aria-label="Copiar código"><i class="fa-solid fa-copy"></i></button>
+          <button id="pasteCodeBtn" class="icon-btn" title="Pegar" aria-label="Pegar"><i class="fa-solid fa-paste"></i></button>
+          <button id="selectAllCodeBtn" class="icon-btn" title="Seleccionar todo" aria-label="Seleccionar todo"><i class="fa-solid fa-highlighter"></i></button>
+          <button id="formatCodeBtn" class="icon-btn" title="Formatear código" aria-label="Formatear código"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+          <button id="closeCurrentTabBtn" class="icon-btn" title="Cerrar archivo" aria-label="Cerrar archivo"><i class="fa-solid fa-xmark"></i></button>
+          <button id="wrapCodeBtn" class="icon-btn" title="Ajustar línea" aria-label="Ajustar línea"><i class="fa-solid fa-align-left"></i></button>
+          <button id="fontSizeDownBtn" class="icon-btn" title="Reducir tamaño de código" aria-label="Reducir tamaño de código"><i class="fa-solid fa-minus"></i></button>
+          <button id="fontSizeBtn" class="icon-btn" title="Tamaño del código" aria-label="Tamaño del código"><i class="fa-solid fa-text-height"></i></button>
+          <button id="fontSizeUpBtn" class="icon-btn" title="Aumentar tamaño de código" aria-label="Aumentar tamaño de código"><i class="fa-solid fa-plus"></i></button>
+          <button id="togglePreviewCenterBtn" class="icon-btn" title="Ocultar vista previa" aria-label="Ocultar vista previa"><i class="fa-solid fa-eye"></i></button>
+        </div>
+        <span id="editorMeta" class="editor-meta">Sin archivo</span>
+      </div>
+      <div id="tabBar" class="tab-bar"></div>
+      <div id="codeSearchBar" class="code-search-bar">
+        <span class="search-toggle-badge">Buscar</span>
+        <input id="codeSearchInput" type="search" placeholder="Buscar dentro del código (Ctrl+F)" />
+        <button id="codeSearchRegexBtn" class="icon-btn regex-btn" title="Regex desactivado" aria-label="Alternar regex">.*</button>
+        <span id="codeSearchCount" class="code-search-count">0</span>
+        <button id="codeSearchPrevBtn" class="icon-btn" title="Coincidencia anterior" aria-label="Coincidencia anterior"><i class="fa-solid fa-chevron-up"></i></button>
+        <button id="codeSearchNextBtn" class="icon-btn" title="Coincidencia siguiente" aria-label="Coincidencia siguiente"><i class="fa-solid fa-chevron-down"></i></button>
+        <button id="closeCodeSearchBtn" class="icon-btn" title="Cerrar buscador" aria-label="Cerrar buscador"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="editorWrap" class="editor-wrap">
+        <pre id="lineNumbers" class="line-numbers" aria-hidden="true"></pre>
+        <div id="activeLineOverlay" class="active-line-overlay" aria-hidden="true"></div>
+        <pre id="highlightLayer" class="highlight-layer" aria-hidden="true"></pre>
+        <textarea id="editor" spellcheck="false" placeholder="Abre un archivo para editarlo..."></textarea>
+        <div id="welcomeOverlay" class="welcome-overlay">
+          <div class="welcome-content">
+            <div class="welcome-logo"><i class="fa-solid fa-code"></i></div>
+            <h2>RTK IDE v0.2</h2>
+            <p class="welcome-sub">Abre una carpeta o archivo para empezar</p>
+            <div class="welcome-shortcuts">
+              <div class="welcome-shortcut"><kbd>Ctrl+O</kbd> <span>Abrir carpeta</span></div>
+              <div class="welcome-shortcut"><kbd>Ctrl+P</kbd> <span>Buscar archivo</span></div>
+              <div class="welcome-shortcut"><kbd>Ctrl+Shift+P</kbd> <span>Alternar layout</span></div>
+              <div class="welcome-shortcut"><kbd>Ctrl+S</kbd> <span>Guardar</span></div>
+              <div class="welcome-shortcut"><kbd>Ctrl+Tab</kbd> <span>Cambiar pestaña</span></div>
+              <div class="welcome-shortcut"><kbd>Ctrl+D</kbd> <span>Duplicar línea</span></div>
+            </div>
+            <div class="welcome-recent" id="welcomeRecentList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div id="previewResizeHandle" class="preview-resize-handle" aria-hidden="true" title="Arrastra para ajustar el ancho del preview"></div>
+    <aside class="panel right">
+      <div class="panel-title row-space">
+        <div class="panel-title-main">
+          <span id="rightPanelTitle">Preview</span>
+          <span id="previewStatus" class="preview-url-inline">Abre un archivo .html para ver el preview</span>
+          <span id="previewUrlLabel" class="preview-url-inline">URL: -</span>
+        </div>
+        <div class="row-actions">
+          <button id="webViewTabBtn" class="small-action active" type="button" title="Vista web" aria-label="Vista web">Web</button>
+          <button id="togglePreviewBtn" class="small-action" type="button" title="Ocultar o mostrar vista previa" aria-label="Ocultar o mostrar vista previa"><i class="fa-solid fa-eye"></i></button>
+          <button id="backToPreviewBtn" class="small-action hidden" type="button" title="Volver al preview" aria-label="Volver al preview"><i class="fa-solid fa-image"></i></button>
+        </div>
+      </div>
+      <div class="panel-tools">
+        <button id="reloadPreviewBtn" class="icon-btn" title="Recargar preview" aria-label="Recargar preview"><i class="fa-solid fa-rotate"></i></button>
+        <button id="copyPathBtn" class="icon-btn" title="Copiar ruta" aria-label="Copiar ruta"><i class="fa-solid fa-copy"></i></button>
+        <button id="openInExplorerBtn" class="icon-btn" title="Abrir en explorador" aria-label="Abrir en explorador"><i class="fa-solid fa-folder-tree"></i></button>
+        <button id="fitPreviewBtn" class="icon-btn" title="Ajustar vista previa" aria-label="Ajustar vista previa"><i class="fa-solid fa-compress"></i></button>
+        <button id="expandPreviewBtn" class="icon-btn" title="Expandir vista previa" aria-label="Expandir vista previa"><i class="fa-solid fa-expand"></i></button>
+        <button id="toggleTerminalBtn" class="icon-btn" title="Terminal" aria-label="Terminal"><i class="fa-solid fa-terminal"></i></button>
+        <button id="splitBtn" class="icon-btn" title="Abrir split" aria-label="Abrir split"><i class="fa-solid fa-table-columns"></i></button>
+        <button id="duplicateTabBtn" class="icon-btn" title="Duplicar pestaña" aria-label="Duplicar pestaña"><i class="fa-regular fa-clone"></i></button>
+        <button id="closeOtherTabsBtn" class="icon-btn" title="Cerrar otras pestañas" aria-label="Cerrar otras pestañas"><i class="fa-solid fa-angles-right"></i></button>
+      </div>
+      <div class="preview-body">
+        <div id="previewError" class="preview-error hidden"></div>
+        <iframe id="previewFrame" class="preview-frame" sandbox="allow-forms allow-modals allow-popups allow-scripts allow-same-origin"></iframe>
+      </div>
+      <div id="splitWrap" class="editor-wrap hidden">
+        <pre id="splitLineNumbers" class="line-numbers" aria-hidden="true"></pre>
+        <div id="splitActiveLineOverlay" class="active-line-overlay" aria-hidden="true"></div>
+        <pre id="splitHighlightLayer" class="highlight-layer" aria-hidden="true"></pre>
+        <textarea id="splitEditor" spellcheck="false" placeholder="Selecciona un archivo para split..."></textarea>
+      </div>
+      <div id="terminalPanel" class="terminal-panel hidden">
+        <div class="terminal-toolbar">
+          <span class="terminal-label">Terminal</span>
+          <button id="terminalModeBtn" class="icon-btn terminal-mode-btn" title="Cambiar modo local/SSH"><i class="fa-solid fa-laptop"></i></button>
+        </div>
+        <div id="terminalOutput" class="terminal-output"></div>
+        <form id="terminalForm" class="terminal-form">
+          <input id="terminalInput" type="text" placeholder="Comando..." spellcheck="false" />
+          <button type="submit"><i class="fa-solid fa-play"></i></button>
+        </form>
+      </div>
+    </aside>
+  </main>
+  <div id="quickOpenOverlay" class="quick-open-overlay hidden">
+    <div class="quick-open-input-wrap">
+      <input id="quickOpenInput" type="text" placeholder="Buscar archivo por nombre..." autocomplete="off" spellcheck="false" />
+    </div>
+    <div id="quickOpenResults" class="quick-open-results"></div>
+  </div>
+  <div id="appContextMenu" class="context-menu hidden" role="menu">
+    <button data-action="inspect"><i class="fa-solid fa-magnifying-glass"></i><span>Inspeccionar elemento</span></button>
+    <button data-action="devtools"><i class="fa-solid fa-code"></i><span>Abrir consola</span></button>
+  </div>
+  <div id="sshModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <strong>Conexión SSH</strong>
+        <button id="closeSshModalBtn" class="icon-btn" aria-label="Cerrar SSH"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="setting">
+          <span>Configuración guardada</span>
+          <div id="sshProfileTabs" class="ssh-tabs" role="tablist" aria-label="Perfiles SSH"></div>
+          <div class="inline-row">
+            <button id="newSshProfileBtn" class="icon-btn" type="button" title="Agregar configuración" aria-label="Agregar configuración"><i class="fa-solid fa-plus"></i></button>
+          </div>
+        </div>
+        <div class="setting">
+          <span>Archivo de configuración TXT</span>
+          <div class="inline-row">
+            <input id="sshConfigPathInput" type="text" placeholder="~/.ssh/config.txt" />
+            <button id="browseSshConfigBtn" class="icon-btn" type="button" title="Buscar config" aria-label="Buscar config"><i class="fa-solid fa-folder-open"></i></button>
+          </div>
+        </div>
+        <div class="setting">
+          <span>Host</span>
+          <select id="sshHostSelect"></select>
+        </div>
+        <div class="setting">
+          <span id="sshIdentityLabel">Llave privada</span>
+          <div class="inline-row">
+            <input id="sshIdentityFileInput" type="text" placeholder="C:/Users/TU_USUARIO/.ssh/id_ed25519" />
+            <button id="browseSshIdentityBtn" class="icon-btn" type="button" title="Buscar archivo" aria-label="Buscar archivo"><i class="fa-solid fa-folder-open"></i></button>
+          </div>
+        </div>
+        <div class="setting">
+          <span>Carpeta inicial del servidor</span>
+          <input id="sshRemoteRootInput" type="text" placeholder="/var/www/html" />
+        </div>
+        <div class="setting">
+          <span>Tipo de servidor</span>
+          <select id="sshPlatformSelect">
+            <option value="auto">Auto</option>
+            <option value="linux">Linux</option>
+            <option value="windows">Windows</option>
+          </select>
+        </div>
+        <div id="sshHint" class="ssh-hint"></div>
+        <div id="sshPreview" class="tree-console"></div>
+        <div class="modal-footer">
+          <button id="loadSshConfigBtn" class="icon-btn" type="button"><i class="fa-solid fa-file-lines"></i></button>
+          <button id="saveSshConfigBtn" class="icon-btn" type="button"><i class="fa-solid fa-floppy-disk"></i></button>
+          <button id="connectSshNowBtn" class="icon-btn" type="button"><i class="fa-solid fa-plug"></i></button>
+          <button id="disconnectSshBtn" class="icon-btn" type="button"><i class="fa-solid fa-plug-circle-xmark"></i></button>
+          <button id="copySshBtn" class="icon-btn" type="button"><i class="fa-solid fa-copy"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="editorContextMenu" class="context-menu hidden" role="menu"></div>
+  <div id="toastHost" class="toast-host"></div>
+  <div id="consoleDrawer" class="console-drawer hidden">
+    <div class="console-drawer-head">
+      <strong>Consola</strong>
+      <div class="console-drawer-actions">
+        <button id="copyConsoleBtn" class="icon-btn" type="button" aria-label="Copiar consola"><i class="fa-solid fa-copy"></i></button>
+        <button id="closeConsoleBtn" class="icon-btn" type="button" aria-label="Cerrar consola"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <pre id="consoleOutput" class="console-output"></pre>
+  </div>
+  <div id="contextMenu" class="context-menu hidden" role="menu">
+    <button data-action="select-all"><i class="fa-solid fa-i-cursor"></i><span>Seleccionar todo</span></button>
+    <button data-action="copy"><i class="fa-solid fa-copy"></i><span>Copiar</span></button>
+    <button data-action="cut"><i class="fa-solid fa-scissors"></i><span>Cortar</span></button>
+    <button data-action="paste"><i class="fa-solid fa-paste"></i><span>Pegar</span></button>
+    <button data-action="open-explorer"><i class="fa-solid fa-folder-tree"></i><span>Abrir en explorador</span></button>
+    <button data-action="refresh-file"><i class="fa-solid fa-rotate"></i><span>Actualizar archivo</span></button>
+    <button data-action="refresh-folder"><i class="fa-solid fa-rotate"></i><span>Actualizar carpeta</span></button>
+    <button data-action="new-file"><i class="fa-solid fa-file-circle-plus"></i><span>Nuevo archivo</span></button>
+    <button data-action="new-folder"><i class="fa-solid fa-folder-plus"></i><span>Nueva carpeta</span></button>
+    <button data-action="rename"><i class="fa-solid fa-i-cursor"></i><span>Renombrar</span></button>
+    <button data-action="download"><i class="fa-solid fa-download"></i><span>Descargar</span></button>
+    <button data-action="download-zip" class="download-zip hidden"><i class="fa-solid fa-file-zipper"></i><span>Descargar ZIP</span></button>
+    <button data-action="delete" class="danger"><i class="fa-solid fa-trash"></i><span>Eliminar</span></button>
+    <button data-action="edit"><i class="fa-solid fa-pen-to-square"></i><span>Editar</span></button>
+  </div>
+  <div id="nameModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <strong id="nameModalTitle">Crear</strong>
+        <button id="closeNameModalBtn" class="icon-btn" aria-label="Cerrar modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="setting">
+          <span id="nameModalLabel">Nombre</span>
+          <input id="nameModalInput" type="text" placeholder="Escribe un nombre" />
+        </div>
+        <div class="modal-footer">
+          <button id="nameModalCancelBtn" class="icon-btn" type="button" aria-label="Cancelar"><i class="fa-solid fa-ban"></i></button>
+          <button id="nameModalConfirmBtn" class="icon-btn" type="button" aria-label="Confirmar"><i class="fa-solid fa-check"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="settingsModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <strong>Configuración</strong>
+        <button id="closeSettingsBtn" class="icon-btn" aria-label="Cerrar configuración"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-grid">
+          <label class="setting">
+            <span>Tema</span>
+            <select id="themeSelect">
+              <option value="light">Claro</option>
+              <option value="vscode">VS Code</option>
+              <option value="sublime">Sublime</option>
+              <option value="solarized">Solarized</option>
+              <option value="night">Noche</option>
+              <option value="ocean">Océano</option>
+              <option value="midnight">Midnight</option>
+              <option value="ember">Ember</option>
+              <option value="monokai">Monokai</option>
+              <option value="slate">Slate</option>
+              <option value="retro">Retro Windows</option>
+              <option value="dracula">Dracula</option>
+              <option value="nord">Nord</option>
+              <option value="catppuccin">Catppuccin</option>
+              <option value="onedark">One Dark</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Vista de código</span>
+            <select id="codeViewerSelect">
+              <option value="auto">Auto</option>
+              <option value="monaco">Monaco</option>
+              <option value="prism">Prism</option>
+              <option value="codemirror">CodeMirror</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Tema Prism</span>
+            <select id="prismThemeSelect">
+              <option value="sublime">Sublime</option>
+              <option value="githublight">GitHub Light</option>
+              <option value="lightplus">Light Plus</option>
+              <option value="alabaster">Alabaster</option>
+              <option value="nordlight">Nord Light</option>
+              <option value="twilight">Twilight</option>
+              <option value="okaidia">Okaidia</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="funky">Funky</option>
+              <option value="solarizedlight">Solarized Light</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Tema CodeMirror</span>
+            <select id="codeMirrorThemeSelect">
+              <option value="eclipse">Claro</option>
+              <option value="material">Oscuro</option>
+              <option value="github">GitHub</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Numeros de linea</span>
+            <select id="lineNumbersSelect">
+              <option value="on">Activado</option>
+              <option value="off">Desactivado</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Linea activa</span>
+            <select id="activeLineSelect">
+              <option value="on">Activado</option>
+              <option value="off">Desactivado</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Color selector</span>
+            <select id="activeLineColorSelect">
+              <option value="cyan">Cyan</option>
+              <option value="blue">Azul</option>
+              <option value="lime">Lima</option>
+              <option value="amber">Amarillo</option>
+              <option value="pink">Rosa</option>
+              <option value="white">Blanco</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Ayuda visible</span>
+            <select id="helpSelect">
+              <option value="on">Sí</option>
+              <option value="off">No</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Densidad visual</span>
+            <select id="densitySelect">
+              <option value="comfortable">Cómoda</option>
+              <option value="compact">Compacta</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Texto guía</span>
+            <select id="hintSelect">
+              <option value="on">Mostrar</option>
+              <option value="off">Ocultar</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Alto contraste</span>
+            <select id="contrastSelect">
+              <option value="off">Normal</option>
+              <option value="on">Activado</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Autoguardado</span>
+            <select id="autosaveSelect">
+              <option value="on">Activado</option>
+              <option value="off">Desactivado</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Tamaño iconos</span>
+            <select id="iconSizeSelect">
+              <option value="small">Pequeño</option>
+              <option value="medium">Medio</option>
+              <option value="large">Grande</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Tamaño texto UI</span>
+            <select id="uiTextSizeSelect">
+              <option value="small">Pequeño</option>
+              <option value="medium">Medio</option>
+              <option value="large">Grande</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Padding global</span>
+            <select id="globalPaddingSelect">
+              <option value="small">Corto</option>
+              <option value="medium">Normal</option>
+              <option value="large">Amplio</option>
+            </select>
+          </label>
+          <label class="setting">
+            <span>Familia iconos</span>
+            <select id="iconFamilySelect">
+              <option value="solid">Solid</option>
+              <option value="outline">Outline compatible</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="pluginsModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card plugins-card">
+      <div class="modal-header">
+        <strong>Plugins</strong>
+        <button id="closePluginsBtn" class="icon-btn" aria-label="Cerrar plugins"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs-row">
+          <button id="pluginsLocalTab" class="small-action active" type="button">Plugins locales</button>
+          <button id="pluginsExternalTab" class="small-action" type="button">Plugins externos</button>
+        </div>
+        <div class="plugins-summary">
+          <div>
+            <strong>Catálogo local</strong>
+            <p>Activa packs del IDE, administra su estado y deja visible solo lo que realmente usas.</p>
+          </div>
+          <button id="refreshPluginsBtn" class="icon-btn" type="button" title="Recargar catálogo" aria-label="Recargar catálogo"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+        <div id="pluginsList" class="plugins-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="closePluginsFooterBtn" class="icon-btn" type="button" aria-label="Cerrar plugins"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+  </div>
+  <div id="loginModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card plugins-card">
+      <div class="modal-header">
+        <strong>Sesión</strong>
+        <button id="closeLoginBtn" class="icon-btn" aria-label="Cerrar login"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="plugins-summary">
+          <div>
+            <strong id="loginStatusTitle">Sesión local del IDE</strong>
+            <p id="loginStatusText">Inicia sesión para guardar el estado administrativo de plugins.</p>
+          </div>
+          <button id="openWebLoginBtn" class="icon-btn" type="button" title="Abrir login web" aria-label="Abrir login web"><i class="fa-solid fa-globe"></i></button>
+        </div>
+        <div class="settings-grid">
+          <label class="setting">
+            <span>Correo</span>
+            <input id="loginEmailInput" type="email" placeholder="correo@ejemplo.com" autocomplete="off">
+          </label>
+          <label class="setting">
+            <span>Contraseña</span>
+            <input id="loginPasswordInput" type="password" placeholder="••••••••" autocomplete="off">
+          </label>
+        </div>
+        <div class="login-actions">
+          <button id="loginSubmitBtn" class="icon-btn" type="button" aria-label="Iniciar sesión"><i class="fa-solid fa-right-to-bracket"></i></button>
+          <button id="logoutBtn" class="icon-btn" type="button" aria-label="Cerrar sesión"><i class="fa-solid fa-power-off"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="updatesModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card plugins-card">
+      <div class="modal-header">
+        <strong>Actualizaciones</strong>
+        <button id="closeUpdatesBtn" class="icon-btn" aria-label="Cerrar actualizaciones"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="plugins-summary">
+          <div>
+            <strong id="updatesStatus">Aún no se ha buscado una actualización.</strong>
+            <p id="updatesDetail">Configura una fuente PHP para consultar versiones y descargar el paquete disponible.</p>
+          </div>
+          <button id="checkUpdatesBtn" class="icon-btn" type="button" title="Buscar actualizaciones" aria-label="Buscar actualizaciones"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+        <div class="settings-grid">
+          <label class="setting">
+            <span>Fuente PHP de actualizaciones</span>
+            <input id="updatesFeedInput" type="text" placeholder="https://routicket.com/api/ide-rtk/update_feed.php" autocomplete="off">
+          </label>
+          <label class="setting">
+            <span>Versión actual</span>
+            <input id="currentVersionInput" type="text" value="0.2" readonly>
+          </label>
+        </div>
+        <div class="update-actions">
+          <button id="openUpdateUrlBtn" class="small-action" type="button">Abrir descarga</button>
+          <button id="applyUpdateBtn" class="small-action" type="button">Aplicar actualización</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeUpdatesFooterBtn" class="icon-btn" type="button" aria-label="Cerrar actualizaciones"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+  </div>
+  <div id="rtkPlayModal" class="modal hidden rtkplay-modal" aria-hidden="true">
+    <div class="modal-card rtkplay-card">
+      <div class="modal-header">
+        <strong>Routicket Play</strong>
+        <div class="rtkplay-mini-nav">
+          <button id="rtkPlayPrevBtn" class="icon-btn" title="Anterior" aria-label="Anterior"><i class="fa-solid fa-backward"></i></button>
+          <button id="rtkPlayPlayBtn" class="icon-btn" title="Reproducir" aria-label="Reproducir"><i class="fa-solid fa-play"></i></button>
+          <button id="rtkPlayNextBtn" class="icon-btn" title="Siguiente" aria-label="Siguiente"><i class="fa-solid fa-forward"></i></button>
+        </div>
+        <button id="rtkPlayBgBtn" class="icon-btn" title="Segundo plano (sigue sonando)" aria-label="Ocultar al fondo"><i class="fa-solid fa-down-left-and-up-right-to-center"></i></button>
+        <button id="closeRtkPlayBtn" class="icon-btn" aria-label="Cerrar Play"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body rtkplay-body">
+        <div class="rtkplay-cover-wrap">
+          <img id="rtkPlayCover" class="rtkplay-cover" src="" alt="Cover" />
+        </div>
+        <div class="rtkplay-info">
+          <strong id="rtkPlayTitle">Cargando...</strong>
+          <span id="rtkPlayArtist"></span>
+        </div>
+        <div class="rtkplay-progress">
+          <input id="rtkPlaySeek" type="range" min="0" max="100" value="0" />
+        </div>
+        <div class="rtkplay-iframe-wrap">
+          <iframe id="rtkPlayFrame" class="rtkplay-frame" src="" sandbox="allow-forms allow-modals allow-popups allow-scripts allow-same-origin"></iframe>
+        </div>
+      </div>
+      <div class="rtkplay-tracks" id="rtkPlayTracks"></div>
+      <div class="modal-footer">
+        <span id="rtkPlayStatus" class="rtkplay-status">Inactivo</span>
+        <button id="rtkPlayRefreshBtn" class="icon-btn" type="button" title="Recargar"><i class="fa-solid fa-rotate"></i></button>
+      </div>
+    </div>
+  </div>
+  <div id="importerModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card importer-card">
+      <div class="modal-header">
+        <strong>Importador Excel</strong>
+        <button id="closeImporterBtn" class="icon-btn" aria-label="Cerrar importador"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body importer-body">
+        <div class="importer-toolbar">
+          <div class="importer-summary">
+            <span id="importerFileName">Ningún archivo cargado</span>
+            <small id="importerFileMeta">Selecciona un .xlsx, .csv o .tsv</small>
+          </div>
+          <div class="importer-actions">
+            <button id="pickImporterFileBtn" class="icon-btn" type="button" title="Elegir archivo" aria-label="Elegir archivo"><i class="fa-solid fa-folder-open"></i></button>
+            <button id="copyImporterJsonBtn" class="icon-btn" type="button" title="Copiar JSON normalizado" aria-label="Copiar JSON normalizado"><i class="fa-solid fa-copy"></i></button>
+            <button id="importerRunBtn" class="icon-btn" type="button" title="Importar" aria-label="Importar"><i class="fa-solid fa-play"></i></button>
+          </div>
+        </div>
+        <div id="importerChecklist" class="importer-checklist"></div>
+        <div id="importerPreview" class="importer-preview"></div>
+        <div class="importer-console-wrap">
+          <div class="importer-console-head">
+            <strong>Consola del importador</strong>
+            <button id="copyImporterConsoleBtn" class="icon-btn" type="button" title="Copiar consola" aria-label="Copiar consola"><i class="fa-solid fa-copy"></i></button>
+          </div>
+          <pre id="importerConsole" class="importer-console">Sin actividad todavía.</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="./renderer.js"></script>
+</body>
+</html>
